@@ -3,17 +3,23 @@ YACC=bison
 CFLAGS=-Wall
 CC=gcc
 BUILD=build
+TEST=test
+
+.PHONY: test
 
 all:parse
 
-parse:grammar.c scanner.c
+test: 
+	./test.sh
+
+parse: grammar.c scanner.c
 	mkdir $(BUILD)
 	$(CC) $(CFLAGS) -o $(BUILD)/$@ $^
 
-grammar.c:grammar.y
+grammar.c: grammar.y
 	$(YACC) -d -o $@ --defines=grammar.tab.h $^
 
-%.c:%.l
+%.c: %.l
 	$(LEX) -o $@ $^
 
 clean:
