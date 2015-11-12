@@ -1,3 +1,5 @@
+// Expected: "1052.369019"
+
 float f(float x) 
 {
     float a;

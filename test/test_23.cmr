@@ -1,4 +1,4 @@
-// Error: invalid assignement
+// Expected: "Error: invalid assignement"
 
 int main() 
 {

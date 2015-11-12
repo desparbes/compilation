@@ -1,3 +1,5 @@
+// Expected: ""
+
 int main()
 {
     return 0;

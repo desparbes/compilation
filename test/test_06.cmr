@@ -1,3 +1,5 @@
+// Expected: ""
+
 int fct_extern(int a);
 
 int main() 

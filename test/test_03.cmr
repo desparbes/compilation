@@ -1,3 +1,5 @@
+// Expected: ""
+
 int f(int a, float b, int d[100]) 
 {
     return 0;

@@ -1,4 +1,4 @@
-// Error: bad arity
+// Expected: "Error: bad arity"
 
 int f(int a, float b) 
 {
