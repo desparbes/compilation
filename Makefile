@@ -1,26 +1,25 @@
 LEX=lex
 YACC=bison
+SRCDIR=src
+OBJDIR=build
 CFLAGS=-Wall
 CC=gcc
-BUILD=build
-TEST=test
 
-.PHONY: test
+.PHONY: test grammar.c grammar.y scanner.c scanner.l clean parse
 
 all:parse
 
-test: 
+test:
 	./test.sh
 
-parse: grammar.c scanner.c
-	mkdir $(BUILD)
-	$(CC) $(CFLAGS) -o $(BUILD)/$@ $^
+parse:grammar.c scanner.c
+	$(CC) $(CFLAGS) -I$(SRCDIR) -I$(OBJDIR) -o $(OBJDIR)/$@ $(addprefix $(OBJDIR)/,$^)
 
-grammar.c: grammar.y
-	$(YACC) -d -o $@ --defines=grammar.tab.h $^
+grammar.c:grammar.y
+	$(YACC) -d -o $(OBJDIR)/$@ --defines=$(OBJDIR)/grammar.tab.h $(addprefix $(SRCDIR)/,$^)
 
-%.c: %.l
-	$(LEX) -o $@ $^
+scanner.c:scanner.l
+	$(LEX) -o $(OBJDIR)/$@ $(addprefix $(SRCDIR)/,$^)
 
 clean:
-	rm -rf build grammar.c scanner.c grammar.tab.h *~ *#
+	rm -rf $(OBJDIR)/*
