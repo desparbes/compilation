@@ -1,7 +1,7 @@
 #!/bin/bash
 
-for i in test/*.c; 
+for i in test/*.cmr; 
 do 
-    gcc $i; 
+    build/parse $i; 
     echo $i; 
 done
