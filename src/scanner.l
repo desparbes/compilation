@@ -1,6 +1,7 @@
 %{
 #include <stdio.h>
 #include <string.h>
+#include "../include/parse.h"
 #include "grammar.tab.h"
 void count();
 int comment ();

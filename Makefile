@@ -2,7 +2,7 @@ LEX=lex
 YACC=bison
 SRCDIR=src
 OBJDIR=build
-CFLAGS=-Wall
+CFLAGS=-Wall -std=gnu99
 CC=gcc
 
 .PHONY: test grammar.c grammar.y scanner.c scanner.l clean parse

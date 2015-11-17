@@ -1,42 +1,170 @@
 %{
     #include <stdio.h>
+    #include "../include/parse.h"
+    #define _GNU_SOURCE 1
     extern int yylineno;
     int yylex ();
     int yyerror ();
 
+    char *newvar() 
+    {
+        static unsigned int i = 0;
+	char *s;
+	asprintf(&s, "x%d", i++);
+	return s;
+    }
+
+    char *get_type(int type)
+    {
+        switch(type) {
+        case INT_T:
+	    return "i32";
+	    break;
+        case FLOAT_T:
+	    return "f32";
+	    break;
+        default:
+	    return "";
+	    break;
+        }
+    }
+    
+    char *get_add(int type)
+    {
+        switch(type) {
+        case INT_T:
+	    return "add";
+	    break;
+        case FLOAT_T:
+	    return "addf";
+	    break;
+        default:
+	    return "";
+	    break;
+        }
+    }
+
+char *get_sub(int type)
+    {
+        switch(type) {
+        case INT_T:
+	    return "sub";
+	    break;
+        case FLOAT_T:
+	    return "subf";
+	    break;
+        default:
+	    return "";
+	    break;
+        }
+    }
+
+char *get_mul(int type)
+    {
+        switch(type) {
+        case INT_T:
+	    return "mul";
+	    break;
+        case FLOAT_T:
+	    return "mulf";
+	    break;
+        default:
+	    return "";
+	    break;
+        }
+    }
+
+    char *get_div(int type)
+    {
+        switch(type) {
+        case INT_T:
+	    return "adiv";
+	    break;
+        case FLOAT_T:
+	    return "adivf";
+	    break;
+        default:
+	    return "";
+	    break;
+        }
+    } 
 %}
 
-%token <string> IDENTIFIER CONSTANTF CONSTANTI 
+%token <string> IDENTIFIER 
+%token <n> CONSTANTI
+%token <f> CONSTANTF
 %token MAP REDUCE EXTERN
 %token INC_OP DEC_OP LE_OP GE_OP EQ_OP NE_OP
 %token SUB_ASSIGN MUL_ASSIGN ADD_ASSIGN
 %token TYPE_NAME
 %token INT FLOAT VOID
 %token IF ELSE WHILE RETURN FOR
+%type <g> primary_expression postfix_expression unary_expression multiplicative_expression additive_expression
 %start program
 %union {
   char *string;
   int n;
   float f;
+  gen_t g;
 }
 %%
 
 primary_expression
-: IDENTIFIER
-| CONSTANTI
-| CONSTANTF
-| '(' expression ')'
-| MAP '(' postfix_expression ',' postfix_expression ')'
-| REDUCE '(' postfix_expression ',' postfix_expression ')'
-| IDENTIFIER '(' ')'
-| IDENTIFIER '(' argument_expression_list ')'
-| IDENTIFIER INC_OP
-| IDENTIFIER DEC_OP
+: IDENTIFIER { 
+    $$.var = "";
+    $$.code = "";
+    $$.type = INT_T;
+}
+| CONSTANTI { 
+    $$.var = newvar();
+    asprintf(&$$.code, "%s = add i32 %d, 0", $$.var, $1);
+    $$.type = INT_T;
+}
+| CONSTANTF { 
+    $$.var = newvar();
+    asprintf(&$$.code, "%s = add f32 %f, 0", $$.var, $1);
+    $$.type = FLOAT_T;
+}
+| '(' expression ')' { 
+    $$.var = "";
+    $$.code = "";
+    $$.type = INT_T;
+}
+| MAP '(' postfix_expression ',' postfix_expression ')' { 
+    $$.var = "";
+    $$.code = "";
+    $$.type = INT_T;
+}
+| REDUCE '(' postfix_expression ',' postfix_expression ')' { 
+    $$.var = "";
+    $$.code = "";
+    $$.type = INT_T;
+}
+| IDENTIFIER '(' ')' { 
+    $$.var = "";
+    $$.code = "";
+    $$.type = INT_T;
+}
+| IDENTIFIER '(' argument_expression_list ')' { 
+    $$.var = "";
+    $$.code = "";
+    $$.type = INT_T;
+}
+| IDENTIFIER INC_OP { 
+    $$.var = "";
+    $$.code = "";
+    $$.type = INT_T;
+}
+| IDENTIFIER DEC_OP { 
+    $$.var = "";
+    $$.code = "";
+    $$.type = INT_T;
+}
 ;
 
 postfix_expression
-: primary_expression
-| postfix_expression '[' expression ']'
+    : primary_expression { $$ = $1; }
+     | postfix_expression '[' expression ']' { $$ = $1; }
 ;
 
 argument_expression_list
@@ -45,30 +173,52 @@ argument_expression_list
 ;
 
 unary_expression
-: postfix_expression
-| INC_OP unary_expression
-| DEC_OP unary_expression
-| unary_operator unary_expression
+: postfix_expression { $$ = $1; }
+| INC_OP unary_expression { $$ = $2; }
+| DEC_OP unary_expression { $$ = $2; }
+| unary_operator unary_expression { $$ = $2; }
 ;
 
 unary_operator
 : '-'
 ;
-
+//duplication...
 multiplicative_expression
 : unary_expression
-| multiplicative_expression '*' unary_expression
-| multiplicative_expression '/' unary_expression
+| multiplicative_expression '*' unary_expression {
+    $$.var = newvar();
+    $$.type = $1.type; //faux
+    asprintf(&$$.code, "%s%s%s = %s %s %s, %s", $1.code, $3.code, 
+	 $$.var, get_mul($$.type), get_type($$.type),  $1.var, $3.var);
+ }
+| multiplicative_expression '/' unary_expression {
+    $$.var = newvar();
+    $$.type = $1.type; //faux
+    asprintf(&$$.code, "%s%s%s = %s %s %s, %s", $1.code, $3.code, 
+	 $$.var, get_div($$.type), get_type($$.type),  $1.var, $3.var);
+ }
 ;
 
 additive_expression
 : multiplicative_expression
-| additive_expression '+' multiplicative_expression
-| additive_expression '-' multiplicative_expression
+| additive_expression '+' multiplicative_expression {
+    $$.var = newvar();
+    $$.type = $1.type; //faux
+    asprintf(&$$.code, "%s%s%s = %s %s %s, %s", $1.code, $3.code, 
+	 $$.var, get_mul($$.type), get_type($$.type),  $1.var, $3.var);
+ }
+| additive_expression '-' multiplicative_expression {
+    $$.var = newvar();
+    $$.type = $1.type; //faux
+    asprintf(&$$.code, "%s%s%s = %s %s %s, %s", $1.code, $3.code, 
+	 $$.var, get_sub($$.type), get_type($$.type),  $1.var, $3.var);
+ }
 ;
 
 comparison_expression
-: additive_expression
+: additive_expression {
+    printf("%s\n", $1.code);
+}
 | additive_expression '<' additive_expression
 | additive_expression '>' additive_expression
 | additive_expression LE_OP additive_expression
