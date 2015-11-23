@@ -44,7 +44,7 @@
         }
     }
 
-char *get_sub(int type)
+    char *get_sub(int type)
     {
         switch(type) {
         case INT_T:
@@ -59,7 +59,7 @@ char *get_sub(int type)
         }
     }
 
-char *get_mul(int type)
+    char *get_mul(int type)
     {
         switch(type) {
         case INT_T:
@@ -117,12 +117,12 @@ primary_expression
 }
 | CONSTANTI { 
     $$.var = newvar();
-    asprintf(&$$.code, "%s = add i32 %d, 0", $$.var, $1);
+    asprintf(&$$.code, "%s = add i32 %d, 0;\n", $$.var, $1);
     $$.type = INT_T;
 }
 | CONSTANTF { 
     $$.var = newvar();
-    asprintf(&$$.code, "%s = add f32 %f, 0", $$.var, $1);
+    asprintf(&$$.code, "%s = add f32 %f, 0;\n", $$.var, $1);
     $$.type = FLOAT_T;
 }
 | '(' expression ')' { 
@@ -188,13 +188,13 @@ multiplicative_expression
 | multiplicative_expression '*' unary_expression {
     $$.var = newvar();
     $$.type = $1.type; //faux
-    asprintf(&$$.code, "%s%s%s = %s %s %s, %s", $1.code, $3.code, 
+    asprintf(&$$.code, "%s%s%s = %s %s %s, %s;\n", $1.code, $3.code, 
 	 $$.var, get_mul($$.type), get_type($$.type),  $1.var, $3.var);
  }
 | multiplicative_expression '/' unary_expression {
     $$.var = newvar();
     $$.type = $1.type; //faux
-    asprintf(&$$.code, "%s%s%s = %s %s %s, %s", $1.code, $3.code, 
+    asprintf(&$$.code, "%s%s%s = %s %s %s, %s;\n", $1.code, $3.code, 
 	 $$.var, get_div($$.type), get_type($$.type),  $1.var, $3.var);
  }
 ;
@@ -204,20 +204,20 @@ additive_expression
 | additive_expression '+' multiplicative_expression {
     $$.var = newvar();
     $$.type = $1.type; //faux
-    asprintf(&$$.code, "%s%s%s = %s %s %s, %s", $1.code, $3.code, 
+    asprintf(&$$.code, "%s%s%s = %s %s %s, %s;\n", $1.code, $3.code, 
 	 $$.var, get_mul($$.type), get_type($$.type),  $1.var, $3.var);
  }
 | additive_expression '-' multiplicative_expression {
     $$.var = newvar();
     $$.type = $1.type; //faux
-    asprintf(&$$.code, "%s%s%s = %s %s %s, %s", $1.code, $3.code, 
+    asprintf(&$$.code, "%s%s%s = %s %s %s, %s;\n", $1.code, $3.code, 
 	 $$.var, get_sub($$.type), get_type($$.type),  $1.var, $3.var);
  }
 ;
 
 comparison_expression
 : additive_expression {
-    printf("%s\n", $1.code);
+    printf("%s", $1.code);
 }
 | additive_expression '<' additive_expression
 | additive_expression '>' additive_expression
