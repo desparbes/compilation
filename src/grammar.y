@@ -1,7 +1,7 @@
 %{
+    #define _GNU_SOURCE 1
     #include <stdio.h>
     #include "../include/parse.h"
-    #define _GNU_SOURCE 1
     extern int yylineno;
     int yylex ();
     int yyerror ();
@@ -51,7 +51,7 @@
 	    return "sub";
 	    break;
         case FLOAT_T:
-	    return "subf";
+	    return "fsub";
 	    break;
         default:
 	    return "";
@@ -66,7 +66,7 @@
 	    return "mul";
 	    break;
         case FLOAT_T:
-	    return "mulf";
+	    return "fmul";
 	    break;
         default:
 	    return "";
@@ -122,7 +122,7 @@ primary_expression
 }
 | CONSTANTF { 
     $$.var = newvar();
-    asprintf(&$$.code, "%s = add f32 %f, 0;\n", $$.var, $1);
+    asprintf(&$$.code, "%s = add float %f, 0;\n", $$.var, $1);
     $$.type = FLOAT_T;
 }
 | '(' expression ')' { 
@@ -187,13 +187,19 @@ multiplicative_expression
 : unary_expression
 | multiplicative_expression '*' unary_expression {
     $$.var = newvar();
-    $$.type = $1.type; //faux
+    if ($1.type == $3.type)
+	$$.type = $1.type;
+    else if ($1.type == FLOAT_T || $3.type == FLOAT_T)
+	$$.type = FLOAT_T;
     asprintf(&$$.code, "%s%s%s = %s %s %s, %s;\n", $1.code, $3.code, 
 	 $$.var, get_mul($$.type), get_type($$.type),  $1.var, $3.var);
  }
 | multiplicative_expression '/' unary_expression {
     $$.var = newvar();
-    $$.type = $1.type; //faux
+    if ($1.type == $3.type)
+	$$.type = $1.type;
+    else if ($1.type == FLOAT_T || $3.type == FLOAT_T)
+	$$.type = FLOAT_T;
     asprintf(&$$.code, "%s%s%s = %s %s %s, %s;\n", $1.code, $3.code, 
 	 $$.var, get_div($$.type), get_type($$.type),  $1.var, $3.var);
  }
@@ -203,13 +209,19 @@ additive_expression
 : multiplicative_expression
 | additive_expression '+' multiplicative_expression {
     $$.var = newvar();
-    $$.type = $1.type; //faux
+    if ($1.type == $3.type)
+	$$.type = $1.type;
+    else if ($1.type == FLOAT_T || $3.type == FLOAT_T)
+	$$.type = FLOAT_T;
     asprintf(&$$.code, "%s%s%s = %s %s %s, %s;\n", $1.code, $3.code, 
 	 $$.var, get_mul($$.type), get_type($$.type),  $1.var, $3.var);
  }
 | additive_expression '-' multiplicative_expression {
     $$.var = newvar();
-    $$.type = $1.type; //faux
+    if ($1.type == $3.type)
+	$$.type = $1.type;
+    else if ($1.type == FLOAT_T || $3.type == FLOAT_T)
+	$$.type = FLOAT_T;
     asprintf(&$$.code, "%s%s%s = %s %s %s, %s;\n", $1.code, $3.code, 
 	 $$.var, get_sub($$.type), get_type($$.type),  $1.var, $3.var);
  }
