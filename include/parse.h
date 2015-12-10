@@ -1,6 +1,7 @@
 enum {
     INT_T,
-    FLOAT_T
+    FLOAT_T,
+    VOID_T
 };
 
 typedef struct gen_t {

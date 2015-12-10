@@ -1,0 +1,11 @@
+// Expected: ""
+
+int main() {
+    int a;	   
+    a = 1256;
+}
+
+
+//%x1 = alloca i32          ;declaration a
+//%x2 = add i32 1256, 0     ;declaration 1256
+//store i32 %x2, i32* %x1   ;affectation 1256 -> a
