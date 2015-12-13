@@ -9,3 +9,4 @@ typedef struct gen_t {
     int type;
     char *var;
 } gen_t;
+

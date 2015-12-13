@@ -5,120 +5,34 @@
     #include "parse.h"
     #include "hash_table.h"
     #include "symbol.h"
+    #include "llvm.h"
+    #include "exception.h"
 
     extern int yylineno;
     int yylex ();
     int yyerror ();
     int last_type = -1;
     struct hash_table *ht;
-    
-    void todo(gen_t *g)
-    {
-        g->var = NULL;
-        g->code = NULL;
-        g->type = 0;
-    }
-    
-    char *newvar() 
-    {
-        static unsigned int i = 0;
-	char *s;
-	asprintf(&s, "%%x%d", i++);
-	return s;
+
+    void todo(gen_t *g) {
+      g->var = NULL;
+      g->code = NULL;
+      g->type = 0;
     }
 
-    char *get_type(int type)
-    {
-        switch(type) {
-        case INT_T:
-	    return "i32";
-	    break;
-        case FLOAT_T:
-	    return "f32";
-	    break;
-        default:
-	    return "unknown type";
-	    break;
-        }
+    char *newvar() {
+      static unsigned int i = 0;
+      char *s;
+      asprintf(&s, "%%x%d", i++);
+      return s;
     }
 
-    char *get_type_var(int type)
-    {
-        switch(type) {
-        case INT_T:
-	    return "i32*";
-	    break;
-        case FLOAT_T:
-	    return "f32*";
-	    break;
-        default:
-	    return "unknown type";
-	    break;
-        }
-    }
-    
-    char *get_add(int type)
-    {
-        switch(type) {
-        case INT_T:
-	    return "add";
-	    break;
-        case FLOAT_T:
-	    return "addf";
-	    break;
-        default:
-	    return "unknown addition";
-	    break;
-        }
-    }
-
-    char *get_sub(int type)
-    {
-        switch(type) {
-        case INT_T:
-	    return "sub";
-	    break;
-        case FLOAT_T:
-	    return "fsub";
-	    break;
-        default:
-	    return "unknown substraction";
-	    break;
-        }
-    }
-
-    char *get_mul(int type)
-    {
-        switch(type) {
-        case INT_T:
-	    return "mul";
-	    break;
-        case FLOAT_T:
-	    return "fmul";
-	    break;
-        default:
-	    return "unknown multiplication";
-	    break;
-        }
-    }
-
-    char *get_div(int type)
-    {
-        switch(type) {
-        case INT_T:
-	    return "sdiv";
-	    break;
-        case FLOAT_T:
-	    return "fdiv";
-	    break;
-        default:
-	    return "unknown division";
-	    break;
-        }
-    } 
+    // Regles sementiques
+    #include "primary_expression.h"
+    #include "unary_expression.h"
 %}
 
-%token <string> IDENTIFIER 
+%token <string> IDENTIFIER
 %token <n> CONSTANTI
 %token <f> CONSTANTF
 %token MAP REDUCE EXTERN
@@ -139,41 +53,24 @@
 %%
 
 primary_expression
-: IDENTIFIER { 
-    if (!ht_has_entry(ht, $1)) {
-	printf("Cannot find symbol %s\n", $1);
-	exit(EXIT_FAILURE);
-    }
-    symbol *s;
-    ht_get_entry(ht, $1, &s);
-    $$.var = s->var;
-    $$.code = s->code;
-    $$.type = s->type;
-    //printf("primary_expression: $1: %s, %s, %s, %d\n", $1, s->var, s->code, s->type);
-}
-| CONSTANTI { 
-    $$.var = newvar();
-    asprintf(&$$.code, "%s = add i32 %d, 0\n", $$.var, $1);
-    //printf("$1: %d\n", $1);
-    $$.type = INT_T;
-}
-| CONSTANTF { 
-    $$.var = newvar();
-    asprintf(&$$.code, "%s = addf float %f, 0\n", $$.var, $1);
-    $$.type = FLOAT_T;
-}
-| '(' expression ')' {todo(&$$);}
-| MAP '(' postfix_expression ',' postfix_expression ')' {todo(&$$);}
-| REDUCE '(' postfix_expression ',' postfix_expression ')' {todo(&$$);}
-| IDENTIFIER '(' ')' {todo(&$$);}
-| IDENTIFIER '(' argument_expression_list ')' {todo(&$$);}
-| IDENTIFIER INC_OP {todo(&$$);}
-| IDENTIFIER DEC_OP {todo(&$$);}
+: IDENTIFIER                                               {  pe_identifier(&$$, $1); }
+| CONSTANTI                                                {  pe_constanti(&$$, $1); }
+| CONSTANTF                                                {  pe_constantf(&$$, $1); }
+| '(' expression ')'                                       {  todo(&$$); }
+| MAP '(' postfix_expression ',' postfix_expression ')'    {  todo(&$$); }
+| REDUCE '(' postfix_expression ',' postfix_expression ')' {  todo(&$$); }
+| IDENTIFIER '(' ')'                                       {  todo(&$$); }
+| IDENTIFIER '(' argument_expression_list ')'              {  todo(&$$); }
+| IDENTIFIER INC_OP                                        {  todo(&$$); }
+| IDENTIFIER DEC_OP                                        {  todo(&$$); }
 ;
 
 postfix_expression
 : primary_expression { $$ = $1; }
-| postfix_expression '[' expression ']' { $$ = $1; }
+| postfix_expression '[' expression ']'
+  {
+    $$ = $1;
+  }
 ;
 
 argument_expression_list
@@ -182,41 +79,39 @@ argument_expression_list
 ;
 
 unary_expression
-: postfix_expression { $$ = $1; }
-| INC_OP unary_expression { $$ = $2; }
-| DEC_OP unary_expression { $$ = $2; }
-| unary_operator unary_expression { 
-    $$.var = $2.var;
-    $$.type = $2.type;
-    asprintf(&$$.code, "%s%s = %s %s 0, %s\n", $2.code, 
-	     $$.var, get_sub($$.type), get_type($$.type), $2.var);
-}
+: postfix_expression              { $$ = $1; }
+| INC_OP unary_expression         { ue_inc(&$$, &$2); }
+| DEC_OP unary_expression         { ue_dec(&$$, &$2); }
+| unary_operator unary_expression { ue_unaray_operator(&$$, &$1); }
 ;
 
 unary_operator
 : '-' {}
 ;
+
 //duplication...
 multiplicative_expression
-: unary_expression {}
-| multiplicative_expression '*' unary_expression {
+: unary_expression { $$ = $1;}
+| multiplicative_expression '*' unary_expression
+  {
     $$.var = newvar();
     if ($1.type == $3.type)
-	$$.type = $1.type;
+      $$.type = $1.type;
     else if ($1.type == FLOAT_T || $3.type == FLOAT_T)
-	$$.type = FLOAT_T;
-    asprintf(&$$.code, "%s%s%s = %s %s %s, %s\n", $1.code, $3.code, 
-	 $$.var, get_mul($$.type), get_type($$.type),  $1.var, $3.var);
- }
-| multiplicative_expression '/' unary_expression {
+      $$.type = FLOAT_T;
+    asprintf(&$$.code, "%s%s%s = %s %s %s, %s\n",
+      $1.code, $3.code, $$.var, get_mul($$.type), get_type($$.type),  $1.var, $3.var);
+  }
+| multiplicative_expression '/' unary_expression
+  {
     $$.var = newvar();
     if ($1.type == $3.type)
-	$$.type = $1.type;
+      $$.type = $1.type;
     else if ($1.type == FLOAT_T || $3.type == FLOAT_T)
-	$$.type = FLOAT_T;
-    asprintf(&$$.code, "%s%s%s = %s %s %s, %s\n", $1.code, $3.code, 
-	 $$.var, get_div($$.type), get_type($$.type),  $1.var, $3.var);
- }
+      $$.type = FLOAT_T;
+    asprintf(&$$.code, "%s%s%s = %s %s %s, %s\n",
+      $1.code, $3.code, $$.var, get_div($$.type), get_type($$.type),  $1.var, $3.var);
+  }
 ;
 
 additive_expression
@@ -227,7 +122,7 @@ additive_expression
 	$$.type = $1.type;
     else if ($1.type == FLOAT_T || $3.type == FLOAT_T)
 	$$.type = FLOAT_T;
-    asprintf(&$$.code, "%s%s%s = %s %s %s, %s\n", $1.code, $3.code, 
+    asprintf(&$$.code, "%s%s%s = %s %s %s, %s\n", $1.code, $3.code,
 	 $$.var, get_mul($$.type), get_type($$.type),  $1.var, $3.var);
  }
 | additive_expression '-' multiplicative_expression {
@@ -236,7 +131,7 @@ additive_expression
 	$$.type = $1.type;
     else if ($1.type == FLOAT_T || $3.type == FLOAT_T)
 	$$.type = FLOAT_T;
-    asprintf(&$$.code, "%s%s%s = %s %s %s, %s\n", $1.code, $3.code, 
+    asprintf(&$$.code, "%s%s%s = %s %s %s, %s\n", $1.code, $3.code,
 	 $$.var, get_sub($$.type), get_type($$.type),  $1.var, $3.var);
  }
 ;
@@ -256,8 +151,8 @@ comparison_expression
 
 expression
 : unary_expression assignment_operator comparison_expression {
-    asprintf(&$$.code, "%sstore %s %s, %s %s\n", 
-	     $3.code, get_type($3.type), $3.var, get_type_var($1.type), $1.var);
+    asprintf(&$$.code, "%sstore %s %s, %s %s\n",
+      $3.code, get_type($3.type), $3.var, get_type_var($1.type), $1.var);
  }
 | comparison_expression {}
 ;
@@ -292,7 +187,7 @@ type_name
 | INT {
     $$.type = INT_T;
     last_type = INT_T;
-}   
+}
 | FLOAT {
     $$.type = FLOAT_T;
     last_type = FLOAT_T;
@@ -304,7 +199,7 @@ declarator
     $$.var = newvar();
     $$.type = last_type;
     asprintf(&$$.code, "%s = alloca %s\n", $$.var, get_type(last_type));
-    symbol *s = init_symbol($1, $$.type, NULL, $$.var);    
+    symbol *s = init_symbol($1, $$.type, NULL, $$.var);
     ht_add_entry(ht, $1, s);
  }
 | '(' declarator ')' {}
@@ -411,14 +306,13 @@ int main (int argc, char *argv[]) {
 	  fprintf (stderr, "%s: Could not open %s\n", *argv, argv[1]);
 	    return 1;
 	}
-    }
+  }
     else {
 	fprintf (stderr, "%s: error: no input file\n", *argv);
 	return 1;
     }
     ht = ht_create(0, NULL);
     yyparse();
-    
     free(file_name);
     ht_free(ht);
     return 0;
