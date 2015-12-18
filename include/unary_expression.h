@@ -4,9 +4,8 @@
 void ue_inc(gen_t* $$, gen_t* $2) {
   if ($2->type != INT_T && $2->type != FLOAT_T) {
     printf("Argument must be a variable");
-    exit(EXIT_FAILLURE);
+    exit(EXIT_FAILURE);
   }
-
   $$->var = $2->var;
   $$->type = $2->type;
   asprintf(&$$->code, "%s = %s %s 1, %s\n",

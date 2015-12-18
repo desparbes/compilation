@@ -30,6 +30,9 @@
     // Regles sementiques
     #include "primary_expression.h"
     #include "unary_expression.h"
+    #include "additive_expression.h"
+    #include "multiplicative_expression.h"
+    #include "declarator.h"
 %}
 
 %token <string> IDENTIFIER
@@ -56,13 +59,13 @@ primary_expression
 : IDENTIFIER                                               {  pe_identifier(&$$, $1); }
 | CONSTANTI                                                {  pe_constanti(&$$, $1); }
 | CONSTANTF                                                {  pe_constantf(&$$, $1); }
-| '(' expression ')'                                       {  todo(&$$); }
+| '(' expression ')'                                       {  $$ = $2; }
 | MAP '(' postfix_expression ',' postfix_expression ')'    {  todo(&$$); }
 | REDUCE '(' postfix_expression ',' postfix_expression ')' {  todo(&$$); }
-| IDENTIFIER '(' ')'                                       {  todo(&$$); }
-| IDENTIFIER '(' argument_expression_list ')'              {  todo(&$$); }
-| IDENTIFIER INC_OP                                        {  todo(&$$); }
-| IDENTIFIER DEC_OP                                        {  todo(&$$); }
+| IDENTIFIER '(' ')'                                       {  pe_function(&$$, $1); }
+| IDENTIFIER '(' argument_expression_list ')'              {  pe_function_param(&$$, $1, &$3); }
+| IDENTIFIER INC_OP                                        {  pe_identifier_inc(&$$, $1); }
+| IDENTIFIER DEC_OP                                        {  pe_identifier_dec(&$$, $1); }
 ;
 
 postfix_expression
@@ -92,55 +95,18 @@ unary_operator
 //duplication...
 multiplicative_expression
 : unary_expression { $$ = $1;}
-| multiplicative_expression '*' unary_expression
-  {
-    $$.var = newvar();
-    if ($1.type == $3.type)
-      $$.type = $1.type;
-    else if ($1.type == FLOAT_T || $3.type == FLOAT_T)
-      $$.type = FLOAT_T;
-    asprintf(&$$.code, "%s%s%s = %s %s %s, %s\n",
-      $1.code, $3.code, $$.var, get_mul($$.type), get_type($$.type),  $1.var, $3.var);
-  }
-| multiplicative_expression '/' unary_expression
-  {
-    $$.var = newvar();
-    if ($1.type == $3.type)
-      $$.type = $1.type;
-    else if ($1.type == FLOAT_T || $3.type == FLOAT_T)
-      $$.type = FLOAT_T;
-    asprintf(&$$.code, "%s%s%s = %s %s %s, %s\n",
-      $1.code, $3.code, $$.var, get_div($$.type), get_type($$.type),  $1.var, $3.var);
-  }
+| multiplicative_expression '*' unary_expression { me_mul(&$$, &$1, &$3); }
+| multiplicative_expression '/' unary_expression { me_div(&$$, &$1, &$3); }
 ;
 
 additive_expression
-: multiplicative_expression {}
-| additive_expression '+' multiplicative_expression {
-    $$.var = newvar();
-    if ($1.type == $3.type)
-	$$.type = $1.type;
-    else if ($1.type == FLOAT_T || $3.type == FLOAT_T)
-	$$.type = FLOAT_T;
-    asprintf(&$$.code, "%s%s%s = %s %s %s, %s\n", $1.code, $3.code,
-	 $$.var, get_mul($$.type), get_type($$.type),  $1.var, $3.var);
- }
-| additive_expression '-' multiplicative_expression {
-    $$.var = newvar();
-    if ($1.type == $3.type)
-	$$.type = $1.type;
-    else if ($1.type == FLOAT_T || $3.type == FLOAT_T)
-	$$.type = FLOAT_T;
-    asprintf(&$$.code, "%s%s%s = %s %s %s, %s\n", $1.code, $3.code,
-	 $$.var, get_sub($$.type), get_type($$.type),  $1.var, $3.var);
- }
+: multiplicative_expression { $$ = $1; }
+| additive_expression '+' multiplicative_expression { ae_add(&$$, &$1, &$3); }
+| additive_expression '-' multiplicative_expression { ae_sub(&$$, &$1, &$3); }
 ;
 
 comparison_expression
-: additive_expression {
-    $$ = $1;
-//    printf("%s", $1.code);
-}
+: additive_expression { $$ = $1; }
 | additive_expression '<' additive_expression
 | additive_expression '>' additive_expression
 | additive_expression LE_OP additive_expression
@@ -150,11 +116,12 @@ comparison_expression
 ;
 
 expression
-: unary_expression assignment_operator comparison_expression {
+: unary_expression assignment_operator comparison_expression
+  {
     asprintf(&$$.code, "%sstore %s %s, %s %s\n",
       $3.code, get_type($3.type), $3.var, get_type_var($1.type), $1.var);
- }
-| comparison_expression {}
+  }
+| comparison_expression { $$ = $1; }
 ;
 
 assignment_operator
@@ -165,48 +132,44 @@ assignment_operator
 ;
 
 declaration
-: type_name declarator_list ';' {
+: type_name declarator_list ';'
+  {
     $$.type = $1.type;
     $$.code = $2.code;
- }
+  }
 | EXTERN type_name declarator_list ';' {}
 ;
 
 declarator_list
-: declarator {
-    $$.code = $1.code;
- }
+: declarator { $$.code = $1.code; }
 | declarator_list ',' declarator {}
 ;
 
 type_name
-: VOID {
+: VOID
+  {
     $$.type = VOID_T;
     last_type = VOID_T;
-}
-| INT {
+  }
+| INT
+  {
     $$.type = INT_T;
     last_type = INT_T;
-}
-| FLOAT {
+  }
+| FLOAT
+  {
     $$.type = FLOAT_T;
     last_type = FLOAT_T;
-}
+  }
 ;
 
 declarator
-: IDENTIFIER {
-    $$.var = newvar();
-    $$.type = last_type;
-    asprintf(&$$.code, "%s = alloca %s\n", $$.var, get_type(last_type));
-    symbol *s = init_symbol($1, $$.type, NULL, $$.var);
-    ht_add_entry(ht, $1, s);
- }
-| '(' declarator ')' {}
-| declarator '[' CONSTANTI ']' {}
-| declarator '[' ']' {}
-| declarator '(' parameter_list ')' {}
-| declarator '(' ')' {}
+: IDENTIFIER                        { declarator_identifier(&$$, $1); }
+| '(' declarator ')'                { $$ = $2; }
+| declarator '[' CONSTANTI ']'      { declarator_array(&$$, &$1, $3); }
+| declarator '[' ']'                { declarator_array_ptr(&$$, &$1); }
+| declarator '(' parameter_list ')' { declarator_function_param(&$$, &$1, &$3); }
+| declarator '(' ')'                { $$ = $1; }
 ;
 
 parameter_list
@@ -288,32 +251,32 @@ extern FILE *yyin;
 char *file_name = NULL;
 
 int yyerror (char *s) {
-    fflush (stdout);
-    fprintf (stderr, "%s:%d:%d: %s\n", file_name, yylineno, column, s);
-    return 0;
+  fflush (stdout);
+  fprintf (stderr, "%s:%d:%d: %s\n", file_name, yylineno, column, s);
+  return 0;
 }
 
 
 int main (int argc, char *argv[]) {
-    FILE *input = NULL;
-    if (argc==2) {
-	input = fopen (argv[1], "r");
-	file_name = strdup (argv[1]);
-	if (input) {
-	    yyin = input;
-	}
-	else {
-	  fprintf (stderr, "%s: Could not open %s\n", *argv, argv[1]);
-	    return 1;
-	}
-  }
-    else {
-	fprintf (stderr, "%s: error: no input file\n", *argv);
-	return 1;
+  FILE *input = NULL;
+  if (argc==2) {
+    input = fopen (argv[1], "r");
+    file_name = strdup (argv[1]);
+    if (input) {
+      yyin = input;
     }
-    ht = ht_create(0, NULL);
-    yyparse();
-    free(file_name);
-    ht_free(ht);
-    return 0;
+    else {
+      fprintf (stderr, "%s: Could not open %s\n", *argv, argv[1]);
+      return 1;
+    }
+  }
+  else {
+    fprintf (stderr, "%s: error: no input file\n", *argv);
+    return 1;
+  }
+  ht = ht_create(0, NULL);
+  yyparse();
+  free(file_name);
+  ht_free(ht);
+  return 0;
 }
