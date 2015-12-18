@@ -8,11 +8,13 @@
     #include "llvm.h"
     #include "exception.h"
 
+
     extern int yylineno;
     int yylex ();
     int yyerror ();
     int last_type = -1;
     struct hash_table *ht;
+    struct hash_table *ht_func;
 
     void todo(gen_t *g) {
       g->var = NULL;
@@ -27,12 +29,21 @@
       return s;
     }
 
+    char *newfunc() {
+      static unsigned int i = 0;
+      char *s;
+      asprintf(&s, "@f%d", i++);
+      return s;
+    }
+
     // Regles sementiques
     #include "primary_expression.h"
     #include "unary_expression.h"
     #include "additive_expression.h"
     #include "multiplicative_expression.h"
     #include "declarator.h"
+    #include "declaration.h"
+    #include "function_definition.h"
 %}
 
 %token <string> IDENTIFIER
@@ -132,17 +143,19 @@ assignment_operator
 ;
 
 declaration
-: type_name declarator_list ';'
-  {
-    $$.type = $1.type;
-    $$.code = $2.code;
-  }
-| EXTERN type_name declarator_list ';' {}
+: type_name declarator_list ';' { declaration(&$$, &$1, &$2); }
+| EXTERN type_name declarator_list ';' { todo(&$$); }
 ;
 
 declarator_list
-: declarator { $$.code = $1.code; }
-| declarator_list ',' declarator {}
+: declarator { $$ = $1;}
+| declarator_list ',' declarator
+  {
+    $$.type = last_type;
+    $$.var = NULL;
+    asprintf(&$$.code, "%s", $1.code);
+    asprintf(&$$.code, "%s", $3.code);
+  }
 ;
 
 type_name
@@ -169,16 +182,16 @@ declarator
 | declarator '[' CONSTANTI ']'      { declarator_array(&$$, &$1, $3); }
 | declarator '[' ']'                { declarator_array_ptr(&$$, &$1); }
 | declarator '(' parameter_list ')' { declarator_function_param(&$$, &$1, &$3); }
-| declarator '(' ')'                { $$ = $1; }
+| declarator '(' ')'                { declarator_function_void(&$$, &$1); }
 ;
 
 parameter_list
-: parameter_declaration
-| parameter_list ',' parameter_declaration
+: parameter_declaration { $$ = $1;}
+| parameter_list ',' parameter_declaration { asprintf(&$$.code, "%s, %s", $1.code, $3.code); }
 ;
 
 parameter_declaration
-: type_name declarator
+: type_name declarator { asprintf(&$$.code, "%s", get_type(last_type)); }
 ;
 
 statement
@@ -236,7 +249,7 @@ external_declaration
 ;
 
 function_definition
-: type_name declarator compound_statement {$$.code = $3.code;}
+: type_name declarator compound_statement { function_def(&$$, &$1, &$2, &$3); }
 ;
 
 %%
