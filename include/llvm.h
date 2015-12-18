@@ -10,6 +10,15 @@ char *get_type(int type)
     case FLOAT_T:
     return "f32";
     break;
+    case PTRF_T:
+    return "f32*";
+    break;
+    case PTRI_T:
+    return "i32*";
+    break;
+    case VOID_T:
+    return "void";
+    break;
     default:
     return "unknown type";
     break;
