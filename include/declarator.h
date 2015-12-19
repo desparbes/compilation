@@ -2,18 +2,12 @@
  #define DECLARATOR_H
 
 void declarator_identifier(gen_t* $$, char* $1) {
-  if (ht_has_entry(ht, $1)) {
-    printf("Logic error: variable %s already defined.", $1);
-    return;
-  }
-  else {
     $$->var = newvar();
     $$->id = $1;
     $$->type = last_type;
     asprintf(&$$->code, "%s = alloca %s\n", $$->var, get_type($$->type));
     symbol* s=init_symbol($1, $$->type, $$->code, $$->var);
     ht_add_entry(ht, $1, s);
-  }
 }
 
 void declarator_array(gen_t* $$, gen_t* $1, int $3) {
