@@ -7,14 +7,10 @@ void declarator_identifier(gen_t* $$, char* $1) {
     return;
   }
   else {
-    if (func_env == 0)
-      $$->var = newvar();
-    else{
-      $$->var = newfunc();
-      func_env = 0;
-    }
+    $$->var = newvar();
+    $$->id = $1;
     $$->type = last_type;
-    asprintf(&$$->code, "%s = alloca %s \n", $$->var, get_type($$->type));
+    asprintf(&$$->code, "%s = alloca %s\n", $$->var, get_type($$->type));
     symbol* s=init_symbol($1, $$->type, $$->code, $$->var);
     ht_add_entry(ht, $1, s);
   }

@@ -1,4 +1,9 @@
+
+int dumy(int k) {
+  return k;
+}
+
 int main(int i, float j){
   int a, b;
-  return 0;
+  return dumy(a);
 }

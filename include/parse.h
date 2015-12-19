@@ -10,4 +10,5 @@ typedef struct gen_s {
     char *code;
     int type;
     char *var;
+    char* id;
 } gen_t;
