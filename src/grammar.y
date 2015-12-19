@@ -6,13 +6,13 @@
     #include "hash_table.h"
     #include "symbol.h"
     #include "llvm.h"
-    #include "exception.h"
 
 
     extern int yylineno;
     int yylex ();
     int yyerror ();
     int last_type = -1;
+    int func_var = 0;
     struct hash_table *ht;
     struct hash_table *ht_func;
 
@@ -143,19 +143,13 @@ assignment_operator
 ;
 
 declaration
-: type_name declarator_list ';' { declaration(&$$, &$1, &$2); }
+: type_name declarator_list ';' { puts($2.code); }
 | EXTERN type_name declarator_list ';' { todo(&$$); }
 ;
 
 declarator_list
-: declarator { $$ = $1;}
-| declarator_list ',' declarator
-  {
-    $$.type = last_type;
-    $$.var = NULL;
-    asprintf(&$$.code, "%s", $1.code);
-    asprintf(&$$.code, "%s", $3.code);
-  }
+: declarator { $$ = $1; }
+| declarator_list ',' declarator { asprintf(&$$.code, "%s%s", $1.code, $3.code); }
 ;
 
 type_name
@@ -177,7 +171,7 @@ type_name
 ;
 
 declarator
-: IDENTIFIER                        { declarator_identifier(&$$, $1); }
+: IDENTIFIER                        { declarator_identifier(&$$, $1);}
 | '(' declarator ')'                { $$ = $2; }
 | declarator '[' CONSTANTI ']'      { declarator_array(&$$, &$1, $3); }
 | declarator '[' ']'                { declarator_array_ptr(&$$, &$1); }

@@ -2,7 +2,7 @@ LEX=lex
 YACC=bison
 SRC=src
 BUILD=build
-CFLAGS=-Wall -std=gnu99
+CFLAGS=-Wall -std=gnu99 -g
 CC=gcc
 INCLUDE=include
 SCRIPT=script
