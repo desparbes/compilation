@@ -12,9 +12,8 @@
     int yylex ();
     int yyerror ();
     int last_type = -1;
-    int func_var = 0;
+    int func_env = 0;
     struct hash_table *ht;
-    struct hash_table *ht_func;
 
     void todo(gen_t *g) {
       g->var = NULL;
@@ -143,13 +142,17 @@ assignment_operator
 ;
 
 declaration
-: type_name declarator_list ';' { puts($2.code); }
-| EXTERN type_name declarator_list ';' { todo(&$$); }
+: type_name declarator_list ';' { declaration(&$$, &$1, &$2); }
+| EXTERN type_name declarator_list ';'
+  {
+    declaration(&$$, &$2, &$3);
+    asprintf(&$$.code, "declare %s", $$.code);
+  }
 ;
 
-declarator_list
-: declarator { $$ = $1; }
-| declarator_list ',' declarator { asprintf(&$$.code, "%s%s", $1.code, $3.code); }
+declaration_list
+: declaration { $$ = $1; }
+| declaration_list declaration
 ;
 
 type_name
@@ -179,6 +182,11 @@ declarator
 | declarator '(' ')'                { declarator_function_void(&$$, &$1); }
 ;
 
+declarator_list
+: declarator { $$ = $1; }
+| declarator_list ',' declarator { asprintf(&$$.code, "%s%s", $1.code, $3.code); }
+;
+
 parameter_list
 : parameter_declaration { $$ = $1;}
 | parameter_list ',' parameter_declaration { asprintf(&$$.code, "%s, %s", $1.code, $3.code); }
@@ -189,32 +197,28 @@ parameter_declaration
 ;
 
 statement
-: compound_statement {$$.code = $1.code;}
-| expression_statement {$$.code = $1.code;}
-| selection_statement {$$.code = $1.code;}
-| iteration_statement {$$.code = $1.code;}
-| jump_statement {$$.code = $1.code;}
+: compound_statement   { $$ = $1; }
+| expression_statement { $$ = $1; }
+| selection_statement  { $$ = $1; }
+| iteration_statement  { $$ = $1; }
+| jump_statement       { $$ = $1; }
 ;
 
 compound_statement
-: '{' '}' {todo(&$$);}
-| '{' statement_list '}' {$$.code = $2.code;}
-| '{' declaration_list statement_list '}' {asprintf(&$$.code, "%s%s", $2.code, $3.code);}
+: '{' '}' { asprintf(&$$.code, "{}"); }
+| '{' statement_list '}' { $$ = $2; asprintf(&$$.code, "{\n %s}", $2.code); }
+| '{' declaration_list statement_list '}' { $$ = $3; asprintf(&$$.code, "{\n %s \n%s}", $2.code, $3.code); }
 ;
 
-declaration_list
-: declaration {$$.code = $1.code;}
-| declaration_list declaration
-;
 
 statement_list
-: statement {$$.code = $1.code;}
-| statement_list statement {asprintf(&$$.code, "%s%s", $1.code, $2.code);}
+: statement { $$ = $1; }
+| statement_list statement { $$ = $2; asprintf(&$$.code, "%s\n%s", $1.code, $2.code);}
 ;
 
 expression_statement
-: ';' {todo(&$$);}
-| expression ';' {$$.code = $1.code;}
+: ';' {}
+| expression ';' {$$ = $1;}
 ;
 
 selection_statement
@@ -228,18 +232,24 @@ iteration_statement
 ;
 
 jump_statement
-: RETURN ';' {todo(&$$);}
-| RETURN expression ';' {todo(&$$);}
+: RETURN ';' {func_env = 1; asprintf(&$$.code, "ret void\n"); }
+| RETURN expression ';'
+  {
+    func_env = 1;
+    $$.var = $2.var;
+    $$.type = $2.type;
+    asprintf(&$$.code, "%s\n ret %s %s\n",$2.code, get_type($2.type), $2.var);
+  }
 ;
 
 program
-: external_declaration {printf("%s", $1.code);}
-| program external_declaration {}
+: external_declaration { puts($1.code); }
+| program external_declaration { puts($2.code); }
 ;
 
 external_declaration
-: function_definition {$$ = $1;}
-| declaration {$$ = $1;}
+: function_definition { $$ = $1; }
+| declaration { $$ = $1; }
 ;
 
 function_definition

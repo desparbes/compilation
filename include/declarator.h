@@ -7,11 +7,11 @@ void declarator_identifier(gen_t* $$, char* $1) {
     return;
   }
   else {
-    if (func_var == 0)
+    if (func_env == 0)
       $$->var = newvar();
     else{
       $$->var = newfunc();
-      func_var = 0;
+      func_env = 0;
     }
     $$->type = last_type;
     asprintf(&$$->code, "%s = alloca %s \n", $$->var, get_type($$->type));
@@ -36,13 +36,13 @@ void declarator_array_ptr(gen_t* $$, gen_t* $1) {
 void declarator_function_param(gen_t* $$, gen_t* $1, gen_t* $3) {
   $$->type = last_type;
   $$->var = $1->var;
-  asprintf(&$$->code, "declare %s %s(%s)\n", get_type($1->type), $1->var, $3->code);
+  asprintf(&$$->code, "%s(%s)\n", $1->var, $3->code);
 }
 
 void declarator_function_void(gen_t* $$, gen_t* $1) {
   $$->type = last_type;
   $$->var = $1->var;
-  asprintf(&$$->code, "declare %s %s(void)\n", get_type($1->type), $1->var);
+  asprintf(&$$->code, "%s(void)\n", $1->var);
 }
 
 
