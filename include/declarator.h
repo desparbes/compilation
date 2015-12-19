@@ -3,18 +3,13 @@
 
 void declarator_identifier(gen_t* $$, char* $1) {
   if (ht_has_entry(ht, $1)) {
-    printf("Logic error: variable %s already defined.", $1);
+    printf("Logic error: variable %s already defined.\n", $1);
     return;
   }
   else {
-    if (func_env == 0)
-      $$->var = newvar();
-    else{
-      $$->var = newfunc();
-      func_env = 0;
-    }
+    $$->var = newvar();
     $$->type = last_type;
-    asprintf(&$$->code, "%s = alloca %s \n", $$->var, get_type($$->type));
+    asprintf(&$$->code, "%s = alloca %s\n", $$->var, get_type($$->type));
     symbol* s=init_symbol($1, $$->type, $$->code, $$->var);
     ht_add_entry(ht, $1, s);
   }
@@ -34,12 +29,14 @@ void declarator_array_ptr(gen_t* $$, gen_t* $1) {
 
 // prototypes
 void declarator_function_param(gen_t* $$, gen_t* $1, gen_t* $3) {
+  $1->var = newfunc();
   $$->type = $1->type;
   $$->var = $1->var;
   asprintf(&$$->code, "%s(%s)\n", $1->var, $3->code);
 }
 
 void declarator_function_void(gen_t* $$, gen_t* $1) {
+  $1->var = newfunc();
   $$->type = $1->type;
   $$->var = $1->var;
   asprintf(&$$->code, "%s(void)\n", $1->var);

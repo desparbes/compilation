@@ -31,7 +31,7 @@
     char *newfunc() {
       static unsigned int i = 0;
       char *s;
-      asprintf(&s, "@f%d", i++);
+      asprintf(&s, "@y%d", i++);
       return s;
     }
 
@@ -72,7 +72,7 @@ primary_expression
 | '(' expression ')'                                       {  $$ = $2; }
 | MAP '(' postfix_expression ',' postfix_expression ')'    {  todo(&$$); }
 | REDUCE '(' postfix_expression ',' postfix_expression ')' {  todo(&$$); }
-| IDENTIFIER '(' ')'                                       {  pe_function(&$$, $1); }
+| IDENTIFIER '(' ')'                                       {  pe_function_void(&$$, $1); }
 | IDENTIFIER '(' argument_expression_list ')'              {  pe_function_param(&$$, $1, &$3); }
 | IDENTIFIER INC_OP                                        {  pe_identifier_inc(&$$, $1); }
 | IDENTIFIER DEC_OP                                        {  pe_identifier_dec(&$$, $1); }
@@ -87,8 +87,8 @@ postfix_expression
 ;
 
 argument_expression_list
-: expression
-| argument_expression_list ',' expression
+: expression { $$ = $1; asprintf(&$$.code, "%s %s", get_type($1.type), $1.var); }
+| argument_expression_list ',' expression { asprintf(&$$.code, "%s, %s", $1.code, $3.code); }
 ;
 
 unary_expression
@@ -193,7 +193,7 @@ parameter_list
 ;
 
 parameter_declaration
-: type_name declarator { asprintf(&$$.code, "%s", get_type(last_type)); }
+: type_name declarator { $$ = $2; asprintf(&$$.code, "%s %s", get_type($2.type), $2.var); }
 ;
 
 statement
@@ -205,15 +205,15 @@ statement
 ;
 
 compound_statement
-: '{' '}' { asprintf(&$$.code, "{}"); }
-| '{' statement_list '}' { $$ = $2; asprintf(&$$.code, "{\n %s}", $2.code); }
-| '{' declaration_list statement_list '}' { $$ = $3; asprintf(&$$.code, "{\n %s \n%s}", $2.code, $3.code); }
+: '{' '}' { asprintf(&$$.code, "{}"); func_env=1; }
+| '{' statement_list '}' { $$ = $2; asprintf(&$$.code, "{\n%s}", $2.code); }
+| '{' declaration_list statement_list '}' { $$ = $3; asprintf(&$$.code, "{\n%s%s}", $2.code, $3.code); }
 ;
 
 
 statement_list
 : statement { $$ = $1; }
-| statement_list statement { $$ = $2; asprintf(&$$.code, "%s\n%s", $1.code, $2.code);}
+| statement_list statement { $$ = $2; asprintf(&$$.code, "%s%s", $1.code, $2.code);}
 ;
 
 expression_statement
@@ -232,13 +232,12 @@ iteration_statement
 ;
 
 jump_statement
-: RETURN ';' {func_env = 1; asprintf(&$$.code, "ret void\n"); }
+: RETURN ';' { asprintf(&$$.code, "ret void\n"); }
 | RETURN expression ';'
   {
-    func_env = 1;
     $$.var = $2.var;
     $$.type = $2.type;
-    asprintf(&$$.code, "%s\n ret %s %s\n",$2.code, get_type($2.type), $2.var);
+    asprintf(&$$.code, "%sret %s %s\n",$2.code, get_type($2.type), $2.var);
   }
 ;
 

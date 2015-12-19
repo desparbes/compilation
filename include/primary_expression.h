@@ -11,14 +11,12 @@ void pe_identifier(gen_t *$$, char* $1) {
   $$->var = s->var;
   $$->code = s->code;
   $$->type = s->type;
-    //printf("primary_expression: $1: %s, %s, %s, %d\n", $1, s->var, s->code, s->type);
 }
 
 void pe_constanti(gen_t *$$, int $1){
   $$->var = newvar();
   $$->type = INT_T;
   asprintf(&$$->code, "%s = add i32 %d, 0\n", $$->var, $1);
-  //printf("$1: %d\n", $1);
 }
 
 void pe_constantf(gen_t *$$, float $1) {
@@ -27,26 +25,32 @@ void pe_constantf(gen_t *$$, float $1) {
   asprintf(&$$->code, "%s = addf float %f, 0\n", $$->var, $1);
 }
 
-void pe_function(gen_t* $$, char* $1) {
+void pe_function_void(gen_t* $$, char* $1) {
   if (!ht_has_entry(ht, $1)) {
-    printf("Cannot find symbol %s\n", $1);
+    printf("Logic error: function %s not defined.\n", $1);
   }
   symbol *s;
   ht_get_entry(ht, $1, &s);
-  $$->var = s->var;
-  $$->code = s->code;
+  $$->var = newvar();
   $$->type = s->type;
+  if (s->type == VOID_T)
+    asprintf(&$$->code, "call %s %s(void)\n", get_type(s->type), s->var);
+  else
+    asprintf(&$$->code, "%s = call %s %s(void)\n", $$->var, get_type(s->type), s->var);
 }
 
 void pe_function_param(gen_t* $$, char* $1, gen_t* $3) {
   if (!ht_has_entry(ht, $1)) {
-    printf("Cannot find symbol %s\n", $1);
+    printf("Logic error: function %s not defined.\n", $1);
   }
   symbol *s;
   ht_get_entry(ht, $1, &s);
-  $$->var = s->var;
+  $$->var = newvar();
   $$->type = s->type;
-  asprintf(&$$->code, "%s%s", $3->code, s->code);
+  if (s->type == VOID_T)
+    asprintf(&$$->code, "call %s %s(%s)\n", get_type(s->type), s->var, $3->code);
+  else
+    asprintf(&$$->code, "%s = call %s %s(%s)\n", $$->var, get_type(s->type), s->var, $3->code);
 }
 
 void pe_identifier_inc(gen_t *$$, char* $1) {
