@@ -3,14 +3,12 @@
 
 
 void pe_identifier(gen_t *$$, char* $1) {
-  if (!ht_has_entry(ht, $1)) {
-    printf("Cannot find symbol %s\n", $1);
-  }
   symbol *s;
   ht_get_entry(ht, $1, &s);
   $$->var = s->var;
-  $$->code = s->code;
+  $$->code = '\0';
   $$->type = s->type;
+  $$->id = s->name;
 }
 
 void pe_constanti(gen_t *$$, int $1){
@@ -26,9 +24,6 @@ void pe_constantf(gen_t *$$, float $1) {
 }
 
 void pe_function_void(gen_t* $$, char* $1) {
-  if (!ht_has_entry(ht, $1)) {
-    printf("Logic error: function %s not defined.\n", $1);
-  }
   symbol *s;
   ht_get_entry(ht, $1, &s);
   $$->var = newvar();
@@ -40,9 +35,6 @@ void pe_function_void(gen_t* $$, char* $1) {
 }
 
 void pe_function_param(gen_t* $$, char* $1, gen_t* $3) {
-  if (!ht_has_entry(ht, $1)) {
-    printf("Logic error: function %s not defined.\n", $1);
-  }
   symbol *s;
   ht_get_entry(ht, $1, &s);
   $$->var = newvar();
@@ -54,29 +46,25 @@ void pe_function_param(gen_t* $$, char* $1, gen_t* $3) {
 }
 
 void pe_identifier_inc(gen_t *$$, char* $1) {
-  if (!ht_has_entry(ht, $1)) {
-    printf("Cannot find symbol %s\n", $1);
-  }
   symbol *s;
   ht_get_entry(ht, $1, &s);
-  $$->var = s->var;
-  $$->code = s->code;
+  $$->var = newvar();
   $$->type = s->type;
-  asprintf(&$$->code, "%s = %s %s 1, %s\n",
-    $$->var, get_add($$->type), get_type($$->type), $$->var);
+  asprintf(&$$->code, "%s = alloc %s \nstore %s %s, %s %s \n%s = %s %s 1, %s \n",
+    $$->var, get_type($$->type),
+    get_type(s->type), s->var, get_type($$->type), $$->var ,
+    s->var, get_add(s->type), get_type(s->type), s->var );
 }
 
 void pe_identifier_dec(gen_t *$$, char* $1) {
-  if (!ht_has_entry(ht, $1)) {
-    printf("Cannot find symbol %s\n", $1);
-  }
   symbol *s;
   ht_get_entry(ht, $1, &s);
-  $$->var = s->var;
-  $$->code = s->code;
+  $$->var = newvar();
   $$->type = s->type;
-  asprintf(&$$->code, "%s = %s %s 1, %s\n",
-    $$->var, get_sub($$->type), get_type($$->type), $$->var);
+  asprintf(&$$->code, "%s = alloc %s \nstore %s %s, %s %s \n%s = %s %s 1, %s \n",
+    $$->var, get_type($$->type),
+    get_type(s->type), s->var, get_type($$->type), $$->var ,
+    s->var, get_sub(s->type), get_type(s->type), s->var );
 }
 
 #endif

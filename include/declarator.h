@@ -2,6 +2,10 @@
  #define DECLARATOR_H
 
 void declarator_identifier(gen_t* $$, char* $1) {
+  if (ht_has_entry(ht, $1)) {
+    printf("Logic error: variable name \"%s\" alreay used.\n", $1);
+    exit(0) ;
+  }
     $$->var = newvar();
     $$->id = $1;
     $$->type = last_type;
@@ -11,13 +15,13 @@ void declarator_identifier(gen_t* $$, char* $1) {
 }
 
 void declarator_array(gen_t* $$, gen_t* $1, int $3) {
-  $$->type = $1->type;
+  $$->type = $1->type+1;
   $$->var = $1->var;
   asprintf(&$$->code, "%s = alloca [%d x %s]\n", $$->var, $3, get_type($1->type));
 }
 
 void declarator_array_ptr(gen_t* $$, gen_t* $1) {
-  $$->type = $1->type;
+  $$->type = $1->type+1;
   $$->var = $1->var;
   asprintf(&$$->code, "%s = alloca %s*\n", $$->var, get_type($1->type));
 }

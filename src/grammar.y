@@ -14,6 +14,7 @@
     int last_type = -1;
     int func_env = 0;
     struct hash_table *ht;
+    struct hash_table *ext_ht;
 
     void todo(gen_t *g) {
       g->var = NULL;
@@ -36,13 +37,16 @@
     }
 
     // Regles sementiques
+    #include "assignment_operator.h"
     #include "primary_expression.h"
     #include "unary_expression.h"
     #include "additive_expression.h"
     #include "multiplicative_expression.h"
     #include "declarator.h"
     #include "declaration.h"
-    #include "function_definition.h"
+    #include "external_declaration.h"
+    #include "postfix_expression.h"
+    #include "expression.h"
 %}
 
 %token <string> IDENTIFIER
@@ -80,10 +84,7 @@ primary_expression
 
 postfix_expression
 : primary_expression { $$ = $1; }
-| postfix_expression '[' expression ']'
-  {
-    $$ = $1;
-  }
+| postfix_expression '[' expression ']' { pe_table(&$$, &$1, &$3);}
 ;
 
 argument_expression_list
@@ -95,7 +96,7 @@ unary_expression
 : postfix_expression              { $$ = $1; }
 | INC_OP unary_expression         { ue_inc(&$$, &$2); }
 | DEC_OP unary_expression         { ue_dec(&$$, &$2); }
-| unary_operator unary_expression { ue_unaray_operator(&$$, &$1); }
+| unary_operator unary_expression { ue_opposite(&$$, &$1); }
 ;
 
 unary_operator
@@ -105,14 +106,14 @@ unary_operator
 //duplication...
 multiplicative_expression
 : unary_expression { $$ = $1;}
-| multiplicative_expression '*' unary_expression { me_mul(&$$, &$1, &$3); }
-| multiplicative_expression '/' unary_expression { me_div(&$$, &$1, &$3); }
+| multiplicative_expression '*' unary_expression { todo(&$$); }
+| multiplicative_expression '/' unary_expression { todo(&$$); }
 ;
 
 additive_expression
 : multiplicative_expression { $$ = $1; }
-| additive_expression '+' multiplicative_expression { ae_add(&$$, &$1, &$3); }
-| additive_expression '-' multiplicative_expression { ae_sub(&$$, &$1, &$3); }
+| additive_expression '+' multiplicative_expression { todo(&$$); }
+| additive_expression '-' multiplicative_expression { todo(&$$); }
 ;
 
 comparison_expression
@@ -126,19 +127,15 @@ comparison_expression
 ;
 
 expression
-: unary_expression assignment_operator comparison_expression
-  {
-    asprintf(&$$.code, "%sstore %s %s, %s %s\n",
-      $3.code, get_type($3.type), $3.var, get_type_var($1.type), $1.var);
-  }
+: unary_expression assignment_operator comparison_expression { assigne_value(&$$, &$1, &$2, &$3); }
 | comparison_expression { $$ = $1; }
 ;
 
 assignment_operator
-: '=' {todo(&$$);}
-| MUL_ASSIGN {todo(&$$);}
-| ADD_ASSIGN {todo(&$$);}
-| SUB_ASSIGN {todo(&$$);}
+: '=' { $$.type = ASSIGN_T; }
+| MUL_ASSIGN { $$.type = MUL_ASSIGN_T; }
+| ADD_ASSIGN { $$.type = ADD_ASSIGN_T; }
+| SUB_ASSIGN { $$.type = SUB_ASSIGN_T; }
 ;
 
 declaration
@@ -232,7 +229,12 @@ iteration_statement
 ;
 
 jump_statement
-: RETURN ';' { asprintf(&$$.code, "ret void\n"); }
+: RETURN ';'
+  {
+    $$.var = newvar();
+    $$.type = VOID_T;
+    asprintf(&$$.code, "ret void\n");
+  }
 | RETURN expression ';'
   {
     $$.var = $2.var;
@@ -247,12 +249,12 @@ program
 ;
 
 external_declaration
-: function_definition { $$ = $1; }
-| declaration { $$ = $1; }
+: function_definition { $$ = $1; ht_free(ht); ht = ht_create(0, NULL); }
+| declaration { external_declaration(&$$, &$1); }
 ;
 
 function_definition
-: type_name declarator compound_statement { function_def(&$$, &$1, &$2, &$3); }
+: type_name declarator compound_statement { function_definition(&$$, &$1, &$2, &$3); }
 ;
 
 %%
@@ -291,8 +293,10 @@ int main (int argc, char *argv[]) {
     return 1;
   }
   ht = ht_create(0, NULL);
+  ext_ht = ht_create(0, NULL);
   yyparse();
   free(file_name);
   ht_free(ht);
+  ht_free(ext_ht);
   return 0;
 }
