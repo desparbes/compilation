@@ -6,6 +6,6 @@ void pe_table(gen_t* $$, gen_t* $1 , gen_t* $3) {
   // access to table element
   $$->var = newvar();
   $$->type = $1->type-1;
-  asprintf(&$$->code, "%s%s = getelementptr %s %s, %s %s\n",$3->code, $$->var, get_type($$->type), $1->var, get_type($3->type), $3->var);
+  asprintf(&$$->code, "%s%s = getelementptr %s %s, %s %s\n",$3->code, $$->var, get_type_adr($$->type), $1->var, get_type($3->type), $3->var);
 }
 #endif

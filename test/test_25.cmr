@@ -4,6 +4,7 @@
 int main() {
     int a;	   
     a = 1256;
+    return 0;
 }
 
 

@@ -25,6 +25,22 @@ char *get_type(int type)
     }
 }
 
+char *get_type_adr(int type)
+{
+    switch(type) {
+    case INT_T:
+	return "i32*";
+	break;
+    case FLOAT_T:
+	return "float*";
+	break;
+    default:
+	return "unknown type";
+	break;
+    }
+}
+
+
 char *get_add(int type)
 {
     switch(type) {
@@ -32,7 +48,7 @@ char *get_add(int type)
 	return "add";
 	break;
     case FLOAT_T:
-	return "addf";
+	return "fadd";
 	break;
     default:
 	return "unknown addition";

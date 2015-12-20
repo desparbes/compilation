@@ -7,7 +7,7 @@ do
     build/parse $i;
     base=$(basename $i .cmr);
     llfile='build/'$base'.ll';
-    lli $llfile;
     sed '2q;d' $i;
+    lli $llfile;
     echo  ;
 done

@@ -301,5 +301,5 @@ int main (int argc, char *argv[]) {
   free(file_name);
   ht_free(ht);
   ht_free(ext_ht);
-  return 0;
+  return EXIT_SUCCESS;
 }

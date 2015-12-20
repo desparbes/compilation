@@ -9,6 +9,7 @@ enum {
 typedef struct gen_s {
     char *code;
     int type;
+    char *adr;
     char *var;
-    char* id;
+    char *id;
 } gen_t;
