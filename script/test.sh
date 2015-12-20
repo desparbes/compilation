@@ -3,7 +3,10 @@
 for i in test/*.cmr; 
 do 
     echo $i;
-    build/parse $i; 
-    head -n 1 $i;
+    head -n 2 $i;
+    build/parse $i;
+    base=$(basename $i .cmr);
+    llfile='build/'$base'.ll';
+    llc $llfile;
     echo  ;
 done

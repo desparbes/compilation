@@ -15,6 +15,7 @@
     int func_env = 0;
     struct hash_table *ht;
     struct hash_table *ext_ht;
+    char *file_name = NULL;
 
     void todo(gen_t *g) {
       g->var = NULL;
@@ -36,7 +37,7 @@
       return s;
     }
 
-    // Regles sementiques
+    // Regles semantiques
     #include "assignment_operator.h"
     #include "primary_expression.h"
     #include "unary_expression.h"
@@ -47,6 +48,7 @@
     #include "external_declaration.h"
     #include "postfix_expression.h"
     #include "expression.h"
+    #include "program.h"
 %}
 
 %token <string> IDENTIFIER
@@ -244,8 +246,8 @@ jump_statement
 ;
 
 program
-: external_declaration { puts($1.code); }
-| program external_declaration { puts($2.code); }
+: external_declaration { generate_code($1.code); }
+| program external_declaration { generate_code($2.code); }
 ;
 
 external_declaration
@@ -265,8 +267,6 @@ extern char yytext[];
 extern int column;
 extern int yylineno;
 extern FILE *yyin;
-
-char *file_name = NULL;
 
 int yyerror (char *s) {
   fflush (stdout);

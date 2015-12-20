@@ -1,5 +1,5 @@
 #ifndef DECLARATOR_H
- #define DECLARATOR_H
+#define DECLARATOR_H
 
 void declarator_identifier(gen_t* $$, char* $1) {
   if (ht_has_entry(ht, $1)) {
