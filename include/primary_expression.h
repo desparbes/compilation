@@ -6,7 +6,7 @@ void pe_identifier(gen_t *$$, char* $1) {
   symbol *s;
   ht_get_entry(ht, $1, &s);
   $$->var = s->var;
-  $$->code = '\0';
+  $$->code = "";
   $$->type = s->type;
   $$->id = s->name;
 }
@@ -40,9 +40,9 @@ void pe_function_param(gen_t* $$, char* $1, gen_t* $3) {
   $$->var = newvar();
   $$->type = s->type;
   if (s->type == VOID_T)
-    asprintf(&$$->code, "call %s %s(%s)\n", get_type(s->type), s->var, $3->code);
+    asprintf(&$$->code, "%scall %s %s(%s)\n", $3->code, get_type(s->type), s->var, $3->var);
   else
-    asprintf(&$$->code, "%s = call %s %s(%s)\n", $$->var, get_type(s->type), s->var, $3->code);
+    asprintf(&$$->code, "%s%s = call %s %s(%s)\n", $3->code, $$->var, get_type(s->type), s->var, $3->var);
 }
 
 void pe_identifier_inc(gen_t *$$, char* $1) {

@@ -17,8 +17,6 @@ void generate_code(char *code)
     char *path;
     format_ll(base);
     asprintf(&path, "build/%s.ll", base); 
-
-    printf("basename: %s\n", path);
     FILE *f = fopen(path, "w");
     if (f)
 	fputs(code, f);

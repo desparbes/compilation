@@ -1,7 +1,7 @@
 enum {
     INT_T,
-    PTRI_T,
     FLOAT_T,
+    PTRI_T,
     PTRF_T,
     VOID_T
 };

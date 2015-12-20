@@ -3,10 +3,11 @@
 for i in test/*.cmr; 
 do 
     echo $i;
-    head -n 2 $i;
+    sed '1q;d' $i;
     build/parse $i;
     base=$(basename $i .cmr);
     llfile='build/'$base'.ll';
-    llc $llfile;
+    lli $llfile;
+    sed '2q;d' $i;
     echo  ;
 done
