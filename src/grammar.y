@@ -7,6 +7,7 @@
     #include "symbol.h"
     #include "llvm.h"
 
+    #define MAXSIZE 50
 
     extern int yylineno;
     int yylex ();
@@ -16,6 +17,7 @@
     struct hash_table *ht;
     struct hash_table *ext_ht;
     char *file_name = NULL;
+    FILE *output = NULL;
 
     void todo(gen_t *g) {
       g->var = NULL;
@@ -46,7 +48,6 @@
     #include "external_declaration.h"
     #include "postfix_expression.h"
     #include "expression.h"
-    #include "program.h"
 %}
 
 %token <string> IDENTIFIER
@@ -249,8 +250,8 @@ jump_statement
 ;
 
 program
-: external_declaration { generate_code($1.code); }
-| program external_declaration { generate_code($2.code); }
+: external_declaration { fputs($1.code, output); }
+| program external_declaration { fputs($2.code, output); }
 ;
 
 external_declaration
@@ -277,6 +278,12 @@ int yyerror (char *s) {
   return 0;
 }
 
+void format_ll(char *base)
+{
+    char *s = strstr(base, ".cmr");
+    if (s != NULL)
+	s[0] = '\0';    
+}
 
 int main (int argc, char *argv[]) {
   FILE *input = NULL;
@@ -295,11 +302,26 @@ int main (int argc, char *argv[]) {
     fprintf (stderr, "%s: error: no input file\n", *argv);
     return 1;
   }
+
+  char *file_name_cp = strdup(file_name);
+  char *base = basename(file_name_cp);
+  char *path;
+  format_ll(base);
+  asprintf(&path, "build/%s.ll", base); 
+  if ((output = fopen(path, "w")) == NULL)
+      fprintf(stderr, "Cannot open %s\n", path);
+
   ht = ht_create(0, NULL);
   ext_ht = ht_create(0, NULL);
+
   yyparse();
+
   free(file_name);
   ht_free(ht);
   ht_free(ext_ht);
+  fclose(input);
+  fclose(output);
+  free(path);
+  free(file_name_cp);
   return EXIT_SUCCESS;
 }

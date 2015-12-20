@@ -11,7 +11,10 @@ float g()
     return 0.;
 }
 
-void h() {}
+void h() 
+{
+	return;
+}
 
 int main() 
 {
