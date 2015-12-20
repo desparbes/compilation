@@ -1,6 +1,0 @@
-#ifndef ADDITIVE_EXPRESSION_H
-#define ADDITIVE_EXPRESSION_H
-
-
-
-#endif

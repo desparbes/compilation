@@ -40,8 +40,6 @@
     #include "assignment_operator.h"
     #include "primary_expression.h"
     #include "unary_expression.h"
-    #include "additive_expression.h"
-    #include "multiplicative_expression.h"
     #include "declarator.h"
     #include "declaration.h"
     #include "external_declaration.h"
@@ -88,8 +86,13 @@ postfix_expression
 ;
 
 argument_expression_list
-: expression { $$ = $1; asprintf(&$$.code, "%s %s", get_type($1.type), $1.var); }
-| argument_expression_list ',' expression { asprintf(&$$.code, "%s, %s", $1.code, $3.code); }
+: expression { $$ = $1; asprintf(&$$.var, "%s %s", get_type($1.type), $1.var);  }
+| argument_expression_list ',' expression
+  {
+    $$.type = $1.type;
+    asprintf(&$$.code, "%s%s", $1.code, $3.code);
+    asprintf(&$$.var, "%s, %s %s", $1.var, get_type($3.type), $3.var);
+  }
 ;
 
 unary_expression
@@ -106,24 +109,24 @@ unary_operator
 //duplication...
 multiplicative_expression
 : unary_expression { $$ = $1;}
-| multiplicative_expression '*' unary_expression { todo(&$$); }
-| multiplicative_expression '/' unary_expression { todo(&$$); }
+| multiplicative_expression '*' unary_expression { operation_expression(&$$, &$1,'*', &$3); }
+| multiplicative_expression '/' unary_expression { operation_expression(&$$, &$1,'/', &$3); }
 ;
 
 additive_expression
 : multiplicative_expression { $$ = $1; }
-| additive_expression '+' multiplicative_expression { todo(&$$); }
-| additive_expression '-' multiplicative_expression { todo(&$$); }
+| additive_expression '+' multiplicative_expression { operation_expression(&$$, &$1,'+', &$3); }
+| additive_expression '-' multiplicative_expression { operation_expression(&$$, &$1,'-', &$3); }
 ;
 
 comparison_expression
 : additive_expression { $$ = $1; }
-| additive_expression '<' additive_expression
-| additive_expression '>' additive_expression
-| additive_expression LE_OP additive_expression
-| additive_expression GE_OP additive_expression
-| additive_expression EQ_OP additive_expression
-| additive_expression NE_OP additive_expression
+| additive_expression '<' additive_expression   { comparison_expression(&$$, &$1, "olt", &$3); }
+| additive_expression '>' additive_expression   { comparison_expression(&$$, &$1, "ogt", &$3); }
+| additive_expression LE_OP additive_expression { comparison_expression(&$$, &$1, "ole", &$3); }
+| additive_expression GE_OP additive_expression { comparison_expression(&$$, &$1, "oge", &$3); }
+| additive_expression EQ_OP additive_expression { comparison_expression(&$$, &$1, "oeq", &$3); }
+| additive_expression NE_OP additive_expression { comparison_expression(&$$, &$1, "one", &$3); }
 ;
 
 expression
@@ -149,7 +152,7 @@ declaration
 
 declaration_list
 : declaration { $$ = $1; }
-| declaration_list declaration
+| declaration_list declaration { asprintf(&$$.code, "%s%s", $1.code, $2.code); }
 ;
 
 type_name
@@ -202,7 +205,7 @@ statement
 ;
 
 compound_statement
-: '{' '}' { asprintf(&$$.code, "{}"); func_env=1; }
+: '{' '}' { asprintf(&$$.code, "{}"); }
 | '{' statement_list '}' { $$ = $2; asprintf(&$$.code, "{\n%s}", $2.code); }
 | '{' declaration_list statement_list '}' { $$ = $3; asprintf(&$$.code, "{\n%s%s}", $2.code, $3.code); }
 ;

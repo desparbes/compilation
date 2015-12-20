@@ -18,7 +18,7 @@ void function_definition(gen_t* $$, gen_t* $1, gen_t* $2, gen_t* $3) {
   ht_get_entry(ht, $2->id, &s);
   $2->var = newfunc();
   s->var = $2->var;
-  asprintf(&$$->code, "define %s %s %s\n", get_type($2->type), $2->var, $3->code);
+  asprintf(&$$->code, "define %s %s%s%s", get_type($2->type), $2->var, $2->code, $3->code);
   symbol* func=init_symbol(s->name, s->type, s->code, s->var);
   ht_add_entry(ext_ht, s->name, func);
 }
